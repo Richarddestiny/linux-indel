@@ -1,0 +1,25 @@
+/*
+ * Copyright 2016 INDEL AG.
+ *
+ * Author: VZ <zuellig@indel.ch>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ * "indel,mx6ginhmi",
+ */ 
+ 
+/dts-v1/;
+
+#include "imx6d.dtsi"
+#include "imx6qdl-ginhmi.dtsi"
+
+/ {
+	model = "Gin-HMI i.MX6 Dual Board";
+	compatible =  "fsl,imx6q";
+
+	memory {
+		reg = <0x10000000 0x80000000>;
+	};
+};
+

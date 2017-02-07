@@ -118,6 +118,7 @@ done:
 	return 0;
 }
 
+
 static int fixed_mdio_read(struct mii_bus *bus, int phy_addr, int reg_num)
 {
 	struct fixed_mdio_bus *fmb = bus->priv;
@@ -152,6 +153,7 @@ static int fixed_mdio_read(struct mii_bus *bus, int phy_addr, int reg_num)
 	return 0xFFFF;
 }
 
+
 static int fixed_mdio_write(struct mii_bus *bus, int phy_addr, int reg_num,
 			    u16 val)
 {
@@ -184,6 +186,7 @@ int fixed_phy_set_link_update(struct phy_device *phydev,
 	return -ENOENT;
 }
 EXPORT_SYMBOL_GPL(fixed_phy_set_link_update);
+
 
 int fixed_phy_update_state(struct phy_device *phydev,
 			   const struct fixed_phy_status *status,

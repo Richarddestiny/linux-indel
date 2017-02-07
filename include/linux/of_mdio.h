@@ -79,7 +79,7 @@ static inline int of_phy_register_fixed_link(struct device_node *np)
 }
 static inline bool of_phy_is_fixed_link(struct device_node *np)
 {
-	return false;
+	return true;
 }
 #endif
 

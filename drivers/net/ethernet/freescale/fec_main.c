@@ -66,6 +66,7 @@
 #include <asm/cacheflush.h>
 
 #include "fec.h"
+#include <linux/phy_fixed.h>
 
 static void set_multicast_list(struct net_device *ndev);
 static void fec_enet_itr_coal_init(struct net_device *ndev);
@@ -207,7 +208,7 @@ MODULE_PARM_DESC(macaddr, "FEC Ethernet MAC address");
 #define FEC_ECR_MAGICEN		(1 << 2)
 #define FEC_ECR_SLEEP		(1 << 3)
 
-#define FEC_MII_TIMEOUT		30000 /* us */
+#define FEC_MII_TIMEOUT		100000//30000 /* us */
 
 /* Transmitter timeout */
 #define TX_TIMEOUT (2 * HZ)
@@ -1651,6 +1652,7 @@ fec_enet_interrupt(int irq, void *dev_id)
 	irqreturn_t ret = IRQ_NONE;
 
 	int_events = readl(fep->hwp + FEC_IEVENT);
+
 	writel(int_events, fep->hwp + FEC_IEVENT);
 	fec_enet_collect_events(fep, int_events);
 
@@ -1671,6 +1673,7 @@ fec_enet_interrupt(int irq, void *dev_id)
 
 	if (fep->ptp_clock)
 		fec_ptp_check_pps_event(fep);
+
 
 	return ret;
 }
@@ -1825,11 +1828,13 @@ static void fec_enet_adjust_link(struct net_device *ndev)
 
 	if (status_change)
 		phy_print_status(phy_dev);
+
 }
 
 static int fec_enet_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
 {
 	struct fec_enet_private *fep = bus->priv;
+
 	unsigned long time_left;
 
 	fep->mii_timeout = 0;
@@ -1845,8 +1850,8 @@ static int fec_enet_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
 			usecs_to_jiffies(FEC_MII_TIMEOUT));
 	if (time_left == 0) {
 		fep->mii_timeout = 1;
-		netdev_err(fep->netdev, "MDIO read timeout\n");
-		return -ETIMEDOUT;
+		netdev_err(fep->netdev, "read timeout\n ");
+//		return -ETIMEDOUT;
 	}
 
 	/* return value */
@@ -1874,7 +1879,7 @@ static int fec_enet_mdio_write(struct mii_bus *bus, int mii_id, int regnum,
 	if (time_left == 0) {
 		fep->mii_timeout = 1;
 		netdev_err(fep->netdev, "MDIO write timeout\n");
-		return -ETIMEDOUT;
+//		return -ETIMEDOUT;
 	}
 
 	return 0;
@@ -1959,10 +1964,12 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	struct phy_device *phy_dev = NULL;
+
 	char mdio_bus_id[MII_BUS_ID_SIZE];
 	char phy_name[MII_BUS_ID_SIZE + 3];
 	int phy_id;
 	int dev_id = fep->dev_id;
+
 
 	fep->phy_dev = NULL;
 
@@ -1970,6 +1977,7 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 		phy_dev = of_phy_connect(ndev, fep->phy_node,
 					 &fec_enet_adjust_link, 0,
 					 fep->phy_interface);
+
 		if (!phy_dev)
 			return -ENODEV;
 	} else {
@@ -1995,6 +2003,8 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 
 		snprintf(phy_name, sizeof(phy_name),
 			 PHY_ID_FMT, mdio_bus_id, phy_id);
+
+
 		phy_dev = phy_connect(ndev, phy_name, &fec_enet_adjust_link,
 				      fep->phy_interface);
 	}
@@ -2027,6 +2037,9 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 
 	return 0;
 }
+
+
+
 
 static int fec_enet_mii_init(struct platform_device *pdev)
 {
@@ -3511,7 +3524,11 @@ fec_probe(struct platform_device *pdev)
 	if (of_get_property(np, "fsl,magic-packet", NULL))
 		fep->wol_flag |= FEC_WOL_HAS_MAGIC_PACKET;
 
+
+	/* Old DTS binding */
 	phy_node = of_parse_phandle(np, "phy-handle", 0);
+
+
 	if (!phy_node && of_phy_is_fixed_link(np)) {
 		ret = of_phy_register_fixed_link(np);
 		if (ret < 0) {
@@ -3529,7 +3546,7 @@ fec_probe(struct platform_device *pdev)
 		if (pdata)
 			fep->phy_interface = pdata->phy;
 		else
-			fep->phy_interface = PHY_INTERFACE_MODE_MII;
+			fep->phy_interface = PHY_INTERFACE_MODE_RGMII;
 	} else {
 		fep->phy_interface = ret;
 	}
@@ -3591,6 +3608,7 @@ fec_probe(struct platform_device *pdev)
 		fec_ptp_init(pdev);
 
 	ret = fec_enet_init(ndev);
+
 	if (ret)
 		goto failed_init;
 
@@ -3604,20 +3622,22 @@ fec_probe(struct platform_device *pdev)
 		}
 		ret = devm_request_irq(&pdev->dev, irq, fec_enet_interrupt,
 				       0, pdev->name, ndev);
+
+
 		if (ret)
 			goto failed_irq;
 
 		fep->irq[i] = irq;
 	}
 
-	ret = of_property_read_u32(np, "fsl,wakeup_irq", &irq);
+	ret = of_property_read_u32(np, "fsl,wakeup_irq", &irq); //?????????????????????????????'''''''
 	if (!ret && irq < FEC_IRQ_NUM)
 		fep->wake_irq = fep->irq[irq];
 	else
 		fep->wake_irq = fep->irq[0];
 
-	init_completion(&fep->mdio_done);
-	ret = fec_enet_mii_init(pdev);
+	//init_completion(&fep->mdio_done);
+	//ret = fec_enet_mii_init(pdev);
 	if (ret)
 		goto failed_mii_init;
 

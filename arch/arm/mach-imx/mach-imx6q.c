@@ -29,6 +29,7 @@
 #include <linux/reboot.h>
 #include <linux/regmap.h>
 #include <linux/micrel_phy.h>
+
 #include <linux/mfd/syscon.h>
 #include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
 #include <linux/of_net.h>
@@ -39,157 +40,22 @@
 #include "common.h"
 #include "cpuidle.h"
 #include "hardware.h"
+#include "../../../include/linux/phy_fixed.h"
 
-/* For imx6q sabrelite board: set KSZ9021RN RGMII pad skew */
-static int ksz9021rn_phy_fixup(struct phy_device *phydev)
-{
-	if (IS_BUILTIN(CONFIG_PHYLIB)) {
-		/* min rx data delay */
-		phy_write(phydev, MICREL_KSZ9021_EXTREG_CTRL,
-			0x8000 | MICREL_KSZ9021_RGMII_RX_DATA_PAD_SCEW);
-		phy_write(phydev, MICREL_KSZ9021_EXTREG_DATA_WRITE, 0x0000);
+static struct fixed_phy_status fpga_fixed_phy_status __initdata = {
+         .link   = 1,
+         .speed  = 100,
+         .duplex = 1,
+};
 
-		/* max rx/tx clock delay, min rx/tx control delay */
-		phy_write(phydev, MICREL_KSZ9021_EXTREG_CTRL,
-			0x8000 | MICREL_KSZ9021_RGMII_CLK_CTRL_PAD_SCEW);
-		phy_write(phydev, MICREL_KSZ9021_EXTREG_DATA_WRITE, 0xf0f0);
-		phy_write(phydev, MICREL_KSZ9021_EXTREG_CTRL,
-			MICREL_KSZ9021_RGMII_CLK_CTRL_PAD_SCEW);
-	}
 
-	return 0;
-}
 
-static void mmd_write_reg(struct phy_device *dev, int device, int reg, int val)
-{
-	phy_write(dev, 0x0d, device);
-	phy_write(dev, 0x0e, reg);
-	phy_write(dev, 0x0d, (1 << 14) | device);
-	phy_write(dev, 0x0e, val);
-}
-
-static int ksz9031rn_phy_fixup(struct phy_device *dev)
-{
-	/*
-	 * min rx data delay, max rx/tx clock delay,
-	 * min rx/tx control delay
-	 */
-	mmd_write_reg(dev, 2, 4, 0);
-	mmd_write_reg(dev, 2, 5, 0);
-	mmd_write_reg(dev, 2, 8, 0x003ff);
-
-	return 0;
-}
-
-/*
- * fixup for PLX PEX8909 bridge to configure GPIO1-7 as output High
- * as they are used for slots1-7 PERST#
- */
-static void ventana_pciesw_early_fixup(struct pci_dev *dev)
-{
-	u32 dw;
-
-	if (!of_machine_is_compatible("gw,ventana"))
-		return;
-
-	if (dev->devfn != 0)
-		return;
-
-	pci_read_config_dword(dev, 0x62c, &dw);
-	dw |= 0xaaa8; // GPIO1-7 outputs
-	pci_write_config_dword(dev, 0x62c, dw);
-
-	pci_read_config_dword(dev, 0x644, &dw);
-	dw |= 0xfe;   // GPIO1-7 output high
-	pci_write_config_dword(dev, 0x644, dw);
-
-	msleep(100);
-}
-DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_PLX, 0x8609, ventana_pciesw_early_fixup);
-DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_PLX, 0x8606, ventana_pciesw_early_fixup);
-DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_PLX, 0x8604, ventana_pciesw_early_fixup);
-
-static int ar8031_phy_fixup(struct phy_device *dev)
-{
-	u16 val;
-
-	/* Set RGMII IO voltage to 1.8V */
-	phy_write(dev, 0x1d, 0x1f);
-	phy_write(dev, 0x1e, 0x8);
-
-	/* disable phy AR8031 SmartEEE function. */
-	phy_write(dev, 0xd, 0x3);
-	phy_write(dev, 0xe, 0x805d);
-	phy_write(dev, 0xd, 0x4003);
-	val = phy_read(dev, 0xe);
-	val &= ~(0x1 << 8);
-	phy_write(dev, 0xe, val);
-
-	/* To enable AR8031 output a 125MHz clk from CLK_25M */
-	phy_write(dev, 0xd, 0x7);
-	phy_write(dev, 0xe, 0x8016);
-	phy_write(dev, 0xd, 0x4007);
-
-	val = phy_read(dev, 0xe);
-	val &= 0xffe3;
-	val |= 0x18;
-	phy_write(dev, 0xe, val);
-
-	/* introduce tx clock delay */
-	phy_write(dev, 0x1d, 0x5);
-	val = phy_read(dev, 0x1e);
-	val |= 0x0100;
-	phy_write(dev, 0x1e, val);
-
-	return 0;
-}
-
-#define PHY_ID_AR8031	0x004dd074
-
-static int ar8035_phy_fixup(struct phy_device *dev)
-{
-	u16 val;
-
-	/* Ar803x phy SmartEEE feature cause link status generates glitch,
-	 * which cause ethernet link down/up issue, so disable SmartEEE
-	 */
-	phy_write(dev, 0xd, 0x3);
-	phy_write(dev, 0xe, 0x805d);
-	phy_write(dev, 0xd, 0x4003);
-
-	val = phy_read(dev, 0xe);
-	phy_write(dev, 0xe, val & ~(1 << 8));
-
-	/*
-	 * Enable 125MHz clock from CLK_25M on the AR8031.  This
-	 * is fed in to the IMX6 on the ENET_REF_CLK (V22) pad.
-	 * Also, introduce a tx clock delay.
-	 *
-	 * This is the same as is the AR8031 fixup.
-	 */
-	ar8031_phy_fixup(dev);
-
-	/*check phy power*/
-	val = phy_read(dev, 0x0);
-	if (val & BMCR_PDOWN)
-		phy_write(dev, 0x0, val & ~BMCR_PDOWN);
-
-	return 0;
-}
-
-#define PHY_ID_AR8035 0x004dd072
 
 static void __init imx6q_enet_phy_init(void)
 {
 	if (IS_BUILTIN(CONFIG_PHYLIB)) {
-		phy_register_fixup_for_uid(PHY_ID_KSZ9021, MICREL_PHY_ID_MASK,
-				ksz9021rn_phy_fixup);
-		phy_register_fixup_for_uid(PHY_ID_KSZ9031, MICREL_PHY_ID_MASK,
-				ksz9031rn_phy_fixup);
-		phy_register_fixup_for_uid(PHY_ID_AR8031, 0xffffffff,
-				ar8031_phy_fixup);
-		phy_register_fixup_for_uid(PHY_ID_AR8035, 0xffffffef,
-				ar8035_phy_fixup);
+
+		fixed_phy_add(PHY_POLL, 0, &fpga_fixed_phy_status);
 	}
 }
 
@@ -229,34 +95,7 @@ put_node:
 	of_node_put(np);
 }
 
-static void __init imx6q_csi_mux_init(void)
-{
-	/*
-	 * MX6Q SabreSD board:
-	 * IPU1 CSI0 connects to parallel interface.
-	 * Set GPR1 bit 19 to 0x1.
-	 *
-	 * MX6DL SabreSD board:
-	 * IPU1 CSI0 connects to parallel interface.
-	 * Set GPR13 bit 0-2 to 0x4.
-	 * IPU1 CSI1 connects to MIPI CSI2 virtual channel 1.
-	 * Set GPR13 bit 3-5 to 0x1.
-	 */
-	struct regmap *gpr;
 
-	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
-	if (!IS_ERR(gpr)) {
-		if (of_machine_is_compatible("fsl,imx6q-sabresd") ||
-			of_machine_is_compatible("fsl,imx6q-sabreauto"))
-			regmap_update_bits(gpr, IOMUXC_GPR1, 1 << 19, 1 << 19);
-		else if (of_machine_is_compatible("fsl,imx6dl-sabresd") ||
-			 of_machine_is_compatible("fsl,imx6dl-sabreauto"))
-			regmap_update_bits(gpr, IOMUXC_GPR13, 0x3F, 0x0C);
-	} else {
-		pr_err("%s(): failed to find fsl,imx6q-iomux-gpr regmap\n",
-		       __func__);
-	}
-}
 
 static void __init imx6q_axi_init(void)
 {
@@ -306,11 +145,13 @@ static void __init imx6q_enet_clk_sel(void)
 static inline void imx6q_enet_init(void)
 {
 	imx6_enet_mac_init("fsl,imx6q-fec", "fsl,imx6q-ocotp");
-	imx6q_enet_phy_init();
+	//imx6q_enet_phy_init();
+
 	imx6q_1588_init();
 	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0)
 		imx6q_enet_clk_sel();
 }
+
 
 static void __init imx6q_init_machine(void)
 {
@@ -328,9 +169,10 @@ static void __init imx6q_init_machine(void)
 
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, parent);
 
+
 	imx6q_enet_init();
 	imx_anatop_init();
-	imx6q_csi_mux_init();
+	//imx6q_csi_mux_init();
 	cpu_is_imx6q() ?  imx6q_pm_init() : imx6dl_pm_init();
 	imx6q_axi_init();
 }
@@ -464,7 +306,7 @@ static const char * const imx6q_dt_compat[] __initconst = {
 	NULL,
 };
 
-DT_MACHINE_START(IMX6Q, "Freescale i.MX6 Quad/DualLite (Device Tree)")
+DT_MACHINE_START(IMX6Q, "Gin_HMI i.MX6 Quad/Dual (Device Tree)")
 	.smp		= smp_ops(imx_smp_ops),
 	.map_io		= imx6q_map_io,
 	.init_irq	= imx6q_init_irq,

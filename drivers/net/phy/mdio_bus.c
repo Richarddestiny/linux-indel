@@ -283,7 +283,7 @@ int mdiobus_register(struct mii_bus *bus)
 	}
 
 	bus->state = MDIOBUS_REGISTERED;
-	pr_info("%s: probed\n", bus->name);
+	pr_info("%s:+ probed\n", bus->name);
 	return 0;
 
 error:

@@ -595,6 +595,7 @@ void fec_ptp_init(struct platform_device *pdev)
 		pr_err("ptp_clock_register failed\n");
 	}
 
+
 	schedule_delayed_work(&fep->time_keep, HZ);
 }
 

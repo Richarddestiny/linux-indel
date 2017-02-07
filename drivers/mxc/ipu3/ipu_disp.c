@@ -932,10 +932,16 @@ void _ipu_init_dc_mappings(struct ipu_soc *ipu)
 	/* IPU_PIX_FMT_BGR24 */
 	_ipu_dc_map_clear(ipu, 14);
 	_ipu_dc_map_link(ipu, 14, 0, 2, 0, 1, 0, 0);
+	/*	_ipu_dc_map_clear(ipu, 14);
+	_ipu_dc_map_config(ipu, 14, 0, 23, 0xFF);
+	_ipu_dc_map_config(ipu, 14, 1, 15, 0xFF);
+	_ipu_dc_map_config(ipu, 14, 2, 7, 0xFF);*/
+
 }
 
 int _ipu_pixfmt_to_map(uint32_t fmt)
 {
+
 	switch (fmt) {
 	case IPU_PIX_FMT_GENERIC:
 	case IPU_PIX_FMT_RGB24:
@@ -1977,5 +1983,6 @@ void ipu_disp_init(struct ipu_soc *ipu)
 	ipu->fg_csc_type = ipu->bg_csc_type = CSC_NONE;
 	ipu->color_key_4rgb = true;
 	_ipu_init_dc_mappings(ipu);
+
 	_ipu_dmfc_init(ipu, DMFC_NORMAL, 1);
 }

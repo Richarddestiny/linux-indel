@@ -295,6 +295,7 @@ int of_phy_register_fixed_link(struct device_node *np)
 	struct phy_device *phy;
 	const char *managed;
 
+
 	err = of_property_read_string(np, "managed", &managed);
 	if (err == 0) {
 		if (strcmp(managed, "in-band-status") == 0) {
@@ -308,16 +309,18 @@ int of_phy_register_fixed_link(struct device_node *np)
 	fixed_link_node = of_get_child_by_name(np, "fixed-link");
 	if (fixed_link_node) {
 		status.link = 1;
-		status.duplex = of_property_read_bool(fixed_link_node,
-						      "full-duplex");
+		status.duplex = of_property_read_bool(fixed_link_node,"full-duplex");
+
 		if (of_property_read_u32(fixed_link_node, "speed", &status.speed))
 			return -EINVAL;
+
 		status.pause = of_property_read_bool(fixed_link_node, "pause");
 		status.asym_pause = of_property_read_bool(fixed_link_node,
 							  "asym-pause");
 		of_node_put(fixed_link_node);
 		phy = fixed_phy_register(PHY_POLL, &status, np);
 		return IS_ERR(phy) ? PTR_ERR(phy) : 0;
+
 	}
 
 	/* Old binding */

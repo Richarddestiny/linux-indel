@@ -33,12 +33,12 @@
 
 #define ST1232_TS_NAME	"st1232-ts"
 
-#define MIN_X		0x00
-#define MIN_Y		0x00
-#define MAX_X		0x31f	/* (800 - 1) */
-#define MAX_Y		0x1df	/* (480 - 1) */
-#define MAX_AREA	0xff
-#define MAX_FINGERS	2
+#define MIN_X		0
+#define MIN_Y		0
+#define MAX_X		479	/* (480 - 1) */
+#define MAX_Y		271	/* (272 - 1) */
+#define MAX_AREA	20
+#define MAX_FINGERS	10
 
 struct st1232_ts_finger {
 	u16 x;
@@ -52,7 +52,6 @@ struct st1232_ts_data {
 	struct input_dev *input_dev;
 	struct st1232_ts_finger finger[MAX_FINGERS];
 	struct dev_pm_qos_request low_latency_req;
-	int reset_gpio;
 };
 
 static int st1232_ts_read_data(struct st1232_ts_data *ts)
@@ -145,17 +144,31 @@ end:
 	return IRQ_HANDLED;
 }
 
-static void st1232_ts_power(struct st1232_ts_data *ts, bool poweron)
+static int st1232_ts_power(struct st1232_ts_data *ts, bool poweron)
 {
-	if (gpio_is_valid(ts->reset_gpio))
-		gpio_direction_output(ts->reset_gpio, poweron);
+	struct device_node *np = ts->client->dev.of_node;
+	int gpio;
+
+	if (!np)
+		return -ENODEV;
+
+	gpio = of_get_named_gpio(np,"wakeup-gpios",0);
+	if (!gpio_is_valid(gpio)){
+			dev_err(&ts->client->dev, "no Power ON?\n");
+			return -ENODEV;
+	}
+
+	gpio_direction_output(gpio, poweron);
+
+
+	return 0;
+
 }
 
 static int st1232_ts_probe(struct i2c_client *client,
 					const struct i2c_device_id *id)
 {
 	struct st1232_ts_data *ts;
-	struct st1232_pdata *pdata = dev_get_platdata(&client->dev);
 	struct input_dev *input_dev;
 	int error;
 
@@ -166,7 +179,7 @@ static int st1232_ts_probe(struct i2c_client *client,
 
 	if (!client->irq) {
 		dev_err(&client->dev, "no IRQ?\n");
-		return -EINVAL;
+		//return -EINVAL;
 	}
 
 	ts = devm_kzalloc(&client->dev, sizeof(*ts), GFP_KERNEL);
@@ -180,36 +193,32 @@ static int st1232_ts_probe(struct i2c_client *client,
 	ts->client = client;
 	ts->input_dev = input_dev;
 
-	if (pdata)
-		ts->reset_gpio = pdata->reset_gpio;
-	else if (client->dev.of_node)
-		ts->reset_gpio = of_get_gpio(client->dev.of_node, 0);
-	else
-		ts->reset_gpio = -ENODEV;
+	error = st1232_ts_power(ts, true);
 
-	if (gpio_is_valid(ts->reset_gpio)) {
-		error = devm_gpio_request(&client->dev, ts->reset_gpio, NULL);
-		if (error) {
-			dev_err(&client->dev,
-				"Unable to request GPIO pin %d.\n",
-				ts->reset_gpio);
-				return error;
-		}
+	if (error) {
+		dev_err(&client->dev, "no Power ON?\n");
+		return -EINVAL;
 	}
-
-	st1232_ts_power(ts, true);
 
 	input_dev->name = "st1232-touchscreen";
 	input_dev->id.bustype = BUS_I2C;
 	input_dev->dev.parent = &client->dev;
 
 	__set_bit(EV_SYN, input_dev->evbit);
+	__set_bit(BTN_TOUCH, input_dev->keybit);
 	__set_bit(EV_KEY, input_dev->evbit);
+	__set_bit(ABS_X, input_dev->absbit);
+	__set_bit(ABS_Y, input_dev->absbit);
 	__set_bit(EV_ABS, input_dev->evbit);
 
 	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR, 0, MAX_AREA, 0, 0);
+
 	input_set_abs_params(input_dev, ABS_MT_POSITION_X, MIN_X, MAX_X, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, MIN_Y, MAX_Y, 0, 0);
+
+
+
+	input_set_drvdata(input_dev, ts);
 
 	error = devm_request_threaded_irq(&client->dev, client->irq,
 					  NULL, st1232_ts_irq_handler,
