@@ -99,7 +99,18 @@
 
 
 
-	mxcfb1: fb@0 {
+	mxcfb1: fb@0{
+			compatible = "fsl,mxc_sdc_fb";
+			disp_dev = "lcd";
+			interface_pix_fmt = "BGR24";
+			mode_str ="AMPIRE-PSP";
+			default_bpp = <16>;
+			int_clk = <0>;
+			late_init = <0>;
+			status = "okay";
+	};
+	
+	mxcfb2: fb@1 {
 			compatible = "fsl,mxc_sdc_fb";
 			disp_dev = "hdmi";
 			interface_pix_fmt = "RGB24";
@@ -110,16 +121,7 @@
 			status = "okay";
 	};
 
-	mxcfb2: fb@1{
-			compatible = "fsl,mxc_sdc_fb";
-			disp_dev = "lcd";
-			interface_pix_fmt = "BGR24";
-			mode_str ="AMPIRE-PSP";
-			default_bpp = <24>;
-			int_clk = <0>;
-			late_init = <0>;
-			status = "okay";
-	};
+
 	
 };
 
