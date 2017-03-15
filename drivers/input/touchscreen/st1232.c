@@ -43,7 +43,6 @@
 struct st1232_ts_finger {
 	u16 x;
 	u16 y;
-	u8 t;
 	bool is_valid;
 };
 
@@ -122,16 +121,16 @@ static int st1232_ts_read_data(struct st1232_ts_data *ts)
 	struct st1232_ts_finger *finger = ts->finger;
 	struct i2c_client *client = ts->client;
 	struct i2c_msg msg[2];
-	int error;
+	int i, y, error;
 	u8 start_reg;
-	u8 buf[10];
+	u8 buf[MAX_FINGERS*4];
 
 	/* read touchscreen data from ST1232 */
 	msg[0].addr = client->addr;
 	msg[0].flags = 0;
 	msg[0].len = 1;
 	msg[0].buf = &start_reg;
-	start_reg = 0x10;
+	start_reg = 0x12;
 
 	msg[1].addr = ts->client->addr;
 	msg[1].flags = I2C_M_RD;
@@ -143,22 +142,13 @@ static int st1232_ts_read_data(struct st1232_ts_data *ts)
 		return error;
 
 	/* get "valid" bits */
-	finger[0].is_valid = buf[2] >> 7;
-	finger[1].is_valid = buf[5] >> 7;
-
-	/* get xy coordinate */
-	if (finger[0].is_valid) {
-		finger[0].x = ((buf[2] & 0x0070) << 4) | buf[3];
-		finger[0].y = ((buf[2] & 0x0007) << 8) | buf[4];
-		finger[0].t = buf[1];
+	for (i = 0,y = 0; i < MAX_FINGERS; i++, y+=3) {
+		finger[i].is_valid = buf[i+y] >> 7;
+		if(finger[i].is_valid){
+			finger[i].x = ((buf[i+y] & 0x0070) << 4) | buf[i+1];
+			finger[i].y = ((buf[i+y] & 0x0007) << 8) | buf[i+2];
+		}
 	}
-
-	if (finger[1].is_valid) {
-		finger[1].x = ((buf[5] & 0x0070) << 4) | buf[6];
-		finger[1].y = ((buf[5] & 0x0007) << 8) | buf[7];
-		finger[1].t = buf[9];
-	}
-
 	return 0;
 }
 
@@ -179,7 +169,6 @@ static irqreturn_t st1232_ts_irq_handler(int irq, void *dev_id)
 		if (!finger[i].is_valid)
 			continue;
 
-		input_report_abs(input_dev, ABS_MT_PRESSURE, finger[i].t);
 		input_report_abs(input_dev, ABS_MT_POSITION_X, finger[i].x);
 		input_report_abs(input_dev, ABS_MT_POSITION_Y, finger[i].y);
 		input_mt_sync(input_dev);
@@ -268,17 +257,23 @@ static int st1232_ts_probe(struct i2c_client *client,
 	input_dev->id.bustype = BUS_I2C;
 	input_dev->dev.parent = &client->dev;
 
-	__set_bit(EV_SYN, input_dev->evbit);
-	__set_bit(BTN_TOUCH, input_dev->keybit);
-	__set_bit(EV_KEY, input_dev->evbit);
-	__set_bit(ABS_X, input_dev->absbit);
-	__set_bit(ABS_Y, input_dev->absbit);
-	__set_bit(EV_ABS, input_dev->evbit);
 
-	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR, 0, MAX_AREA, 0, 0);
+	__set_bit(EV_KEY, input_dev->evbit);
+	__set_bit(EV_ABS, input_dev->evbit);
+	__set_bit(BTN_TOUCH, input_dev->keybit);
+
+	input_set_abs_params(input_dev, ABS_X, 			   MIN_X, MAX_X, 0, 0);
+	input_set_abs_params(input_dev, ABS_Y, 			   MIN_Y, MAX_Y, 0, 0);
+
 	input_set_abs_params(input_dev, ABS_MT_POSITION_X, MIN_X, MAX_X, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, MIN_Y, MAX_Y, 0, 0);
-	input_set_abs_params(input_dev, ABS_MT_PRESSURE, 0, 240, 0, 0);
+
+
+
+	if (error) {
+		dev_err(&client->dev, "Unable to init MT slots.\n");
+		return error;
+	}
 
 	input_set_drvdata(input_dev, ts);
 

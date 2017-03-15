@@ -61,12 +61,21 @@
 			enable-active-high;
 		};
 		
-		reg_sd3_vmmc: regulator@4 {
+		reg_sd2_vmmc: regulator@4 {
 			compatible = "regulator-fixed";
-			regulator-name = "P3V3_SDa_SWITCHED"; /*?????????????????????????????*/
+			regulator-name = "P3V3_SD2_SWITCHED";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			#gpio = <&gpio7 8 GPIO_ACTIVE_HIGH>;
+			gpio = <&gpio2 2 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
+		
+		reg_sd3_vmmc: regulator@5 {
+			compatible = "regulator-fixed";
+			regulator-name = "P3V3_SD3_SWITCHED";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio2 11 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
 		};				
 	};
@@ -91,7 +100,7 @@
 			compatible = "fsl,lcd";
 			ipu_id = <0>;
 			disp_id = <0>;
-			default_ifmt = "BGR24";
+			default_ifmt = "RGB24";
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_ipu1>;
 			status = "okay";
@@ -102,7 +111,7 @@
 	mxcfb1: fb@0{
 			compatible = "fsl,mxc_sdc_fb";
 			disp_dev = "lcd";
-			interface_pix_fmt = "BGR24";
+			interface_pix_fmt = "RGB24";
 			mode_str ="AMPIRE-PSP";
 			default_bpp = <16>;
 			int_clk = <0>;
@@ -170,40 +179,29 @@
 	status = "okay";
 
 	touchscreen@55 {
-		compatible = "sitronix,st1232";
+		compatible = "sitronix,st1633";
 		reg = <0x55>;
 		interrupt-parent = <&gpio3>;
 		interrupts = <29 8>;
 		wakeup-gpios = <&gpio3 30 GPIO_ACTIVE_HIGH>;
-		/*gpios = <&gpio3 30 0>;*/
-		
+		/*gpios = <&gpio3 30 0>;*/	
 	};	
 };
 
-/* HDMI */
+/* HDMI 
+ * PMIC
+ * CLOCK
+ * FPGA
+ */
 &i2c2 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 	
-	hdmi: edid@50 {
-		compatible = "fsl,imx6-hdmi-i2c";
-		reg = <0x50>;
-	};
-};
-
-
-&i2c3 {
-	clock-frequency = <400000>;
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_i2c3>;
-	status = "okay";
-	
 	pmic: pfuze100@08 {
 		compatible = "fsl,pfuze100";
 		reg = <0x08>;
-
 		regulators {
 			sw1a_reg: sw1abc {
 				regulator-min-microvolt = <300000>;
@@ -279,6 +277,19 @@
 		};
 	};
 	
+	hdmi: edid@50 {
+		compatible = "fsl,imx6-hdmi-i2c";
+		reg = <0x50>;
+	};
+};
+
+/* GYRO, PCIe */
+&i2c3 {
+	clock-frequency = <400000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c3>;
+	status = "okay";
+	
 	mpu6050@68 {
 		compatible = "invensense,mpu6050";
 		reg = <0x68>;
@@ -334,25 +345,23 @@
 };
 
 
-&usdhc3 {
+&usdhc2 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usdhc3>;
+	pinctrl-0 = <&pinctrl_usdhc2>;
 	bus-width = <4>;
-	cd-gpios = <&gpio2 1 GPIO_ACTIVE_LOW>;
+	cd-gpios = <&gpio2 2 GPIO_ACTIVE_LOW>;
 	
-	no-1-8-v;
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
 	status = "okay";
 };
 
 
-&usdhc4 {
+&usdhc3 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usdhc4>;
+	pinctrl-0 = <&pinctrl_usdhc3>;
 	bus-width = <8>;
 	non-removable;
-	no-1-8-v;
 	keep-power-in-suspend;
 	status = "okay";
 };
@@ -366,9 +375,10 @@
 		pinctrl_hog: hoggrp {
 			fsl,pins = <
 				
-				MX6QDL_PAD_EIM_D30__GPIO3_IO30 0x0f0b0	/* Touch controller reset active low     */
-				MX6QDL_PAD_EIM_D29__GPIO3_IO29 0x0f0b0	/* Touch controller interrupt active low */
+				MX6QDL_PAD_EIM_D30__GPIO3_IO30 0x0f0b0	/* RGB Touch controller reset active low     */
+				MX6QDL_PAD_EIM_D29__GPIO3_IO29 0x0f0b0	/* RGB Touch controller interrupt active low */
 			
+			/*											/*											 */
 				
 				MX6QDL_PAD_SD2_DAT2__GPIO1_IO13  0x80000000
 				
@@ -421,8 +431,6 @@
 			>;
 		};
 
-		
-
 		pinctrl_hdmi_cec: hdmicecgrp {
 			fsl,pins = <
 				MX6QDL_PAD_KEY_ROW2__HDMI_TX_CEC_LINE 0x1f8b0
@@ -464,9 +472,6 @@
 					>;
 				};
 		
-	
-		
-		
 		pinctrl_uart2: uart2grp {
 			fsl,pins = <
 				MX6QDL_PAD_EIM_D26__UART2_TX_DATA	0x1b0b1
@@ -483,29 +488,29 @@
 		};
 
 
+		pinctrl_usdhc2: usdhc2grp {
+			fsl,pins = <
+				MX6QDL_PAD_SD2_CMD__SD2_CMD		0x17059
+				MX6QDL_PAD_SD2_CLK__SD2_CLK		0x10059
+				MX6QDL_PAD_SD2_DAT0__SD2_DATA0		0x17059
+				MX6QDL_PAD_SD2_DAT1__SD2_DATA1		0x17059
+				MX6QDL_PAD_SD2_DAT2__SD2_DATA2		0x17059
+				MX6QDL_PAD_SD2_DAT3__SD2_DATA3		0x17059
+			>;
+		};
+		
 		pinctrl_usdhc3: usdhc3grp {
 			fsl,pins = <
-				MX6QDL_PAD_SD3_CMD__SD3_CMD		0x17059
-				MX6QDL_PAD_SD3_CLK__SD3_CLK		0x10059
+				MX6QDL_PAD_SD3_CMD__SD3_CMD			0x17059
+				MX6QDL_PAD_SD3_CLK__SD3_CLK			0x10059
 				MX6QDL_PAD_SD3_DAT0__SD3_DATA0		0x17059
 				MX6QDL_PAD_SD3_DAT1__SD3_DATA1		0x17059
 				MX6QDL_PAD_SD3_DAT2__SD3_DATA2		0x17059
 				MX6QDL_PAD_SD3_DAT3__SD3_DATA3		0x17059
-			>;
-		};
-		
-		pinctrl_usdhc4: usdhc4grp {
-			fsl,pins = <
-				MX6QDL_PAD_SD4_CMD__SD4_CMD			0x17059
-				MX6QDL_PAD_SD4_CLK__SD4_CLK			0x10059
-				MX6QDL_PAD_SD4_DAT0__SD4_DATA0		0x17059
-				MX6QDL_PAD_SD4_DAT1__SD4_DATA1		0x17059
-				MX6QDL_PAD_SD4_DAT2__SD4_DATA2		0x17059
-				MX6QDL_PAD_SD4_DAT3__SD4_DATA3		0x17059
-				MX6QDL_PAD_SD4_DAT4__SD4_DATA4		0x17059
-				MX6QDL_PAD_SD4_DAT5__SD4_DATA5		0x17059
-				MX6QDL_PAD_SD4_DAT6__SD4_DATA6		0x17059
-				MX6QDL_PAD_SD4_DAT7__SD4_DATA7		0x17059
+				MX6QDL_PAD_SD3_DAT4__SD3_DATA4		0x17059
+				MX6QDL_PAD_SD3_DAT5__SD3_DATA5		0x17059
+				MX6QDL_PAD_SD3_DAT6__SD3_DATA6		0x17059
+				MX6QDL_PAD_SD3_DAT7__SD3_DATA7		0x17059
 			>;
 		};
 		
