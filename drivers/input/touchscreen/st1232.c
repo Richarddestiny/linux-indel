@@ -174,6 +174,7 @@ static irqreturn_t st1232_ts_irq_handler(int irq, void *dev_id)
 		input_mt_sync(input_dev);
 		count++;
 	}
+	input_report_key(input_dev, BTN_TOUCH, 1);
 
 	/* SYN_MT_REPORT only if no contact */
 	if (!count) {
@@ -255,12 +256,13 @@ static int st1232_ts_probe(struct i2c_client *client,
 
 	input_dev->name = "st1232-touchscreen";
 	input_dev->id.bustype = BUS_I2C;
+	input_dev->id.vendor = 0xFF;
+	input_dev->id.version = 0x1001;
 	input_dev->dev.parent = &client->dev;
 
-
-	__set_bit(EV_KEY, input_dev->evbit);
-	__set_bit(EV_ABS, input_dev->evbit);
-	__set_bit(BTN_TOUCH, input_dev->keybit);
+	input_set_capability(input_dev, EV_KEY, BTN_TOUCH);
+	//input_set_capability(input_dev,EV_PWR,EV_KEY);
+	//input_set_capability(input_dev,EV_PWR,EV_REL);
 
 	input_set_abs_params(input_dev, ABS_X, 			   MIN_X, MAX_X, 0, 0);
 	input_set_abs_params(input_dev, ABS_Y, 			   MIN_Y, MAX_Y, 0, 0);
