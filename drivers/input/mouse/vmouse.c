@@ -64,10 +64,6 @@ static struct attribute_group vmouse_attr_group = {
 };
 
 
-
-
-
-
 static int vmouse_open(struct input_dev *dev)
 {
 	return 0;
@@ -91,7 +87,7 @@ static int __init vmouse_init(void)
 	}
 
 	/* Create a sysfs node to read simulated coordinates */
-	sysfs_create_group(&vmouse_dev->dev.kobj, &vmouse_attr_group);
+	err = sysfs_create_group(&vmouse_dev->dev.kobj, &vmouse_attr_group);
 
 	vmouse_input_dev = input_allocate_device();
 	if (!vmouse_input_dev)
