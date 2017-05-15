@@ -10,4 +10,4 @@ make -j4 zImage LOADADDR=0x10008000
 
 make imx6d-ginhmi.dtb
 
-#make
+make modules

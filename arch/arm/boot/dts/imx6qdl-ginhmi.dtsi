@@ -85,7 +85,7 @@
 		pwms = <&pwm3 0 12000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
 		default-brightness-level = <7>;
-		status = "okay";
+		status = "disabled";
 	};
 		
 	backlight_ldb{
@@ -103,11 +103,19 @@
 			default_ifmt = "RGB24";
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_ipu1>;
-			status = "okay";
+			status = "disabled";
 	};
-
-
-
+	
+	mxcfb1: fb@0 {
+			compatible = "fsl,mxc_sdc_fb";
+			disp_dev = "ldb";
+			interface_pix_fmt = "RGB24";
+			default_bpp = <24>;
+			int_clk = <0>;
+			late_init = <0>;
+			status = "okay";
+		};
+	/*
 	mxcfb1: fb@0{
 			compatible = "fsl,mxc_sdc_fb";
 			disp_dev = "lcd";
@@ -117,7 +125,7 @@
 			int_clk = <0>;
 			late_init = <0>;
 			status = "okay";
-	};
+	};*/
 	
 	mxcfb2: fb@1 {
 			compatible = "fsl,mxc_sdc_fb";
@@ -127,11 +135,41 @@
 			default_bpp = <24>;
 			int_clk = <0>;
 			late_init = <0>;
-			status = "okay";
+			status = "disabled";
 	};
-
-
 	
+};
+
+&ldb {
+		status = "okay";
+
+		lvds-channel@0 {
+			fsl,data-mapping = "jeida";
+			fsl,data-width = <24>;
+			crtc = "ipu1-di0";
+			primary;
+			status = "okay";
+
+			display-timings {
+				native-mode = <&timing0>;
+				timing0: hsd100pxn1 {
+					clock-frequency = <10000000>;
+					hactive = <480>;
+					vactive = <272>;
+					hfront-porch = <2 2 82>;
+					hback-porch = <2 2 41>;
+					hsync-len = <2 41 41>;
+					vfront-porch = <1 2 227>;
+					vback-porch = <1 2 11>;
+					vsync-len = <1 10 11>;
+			};
+		};
+	};
+};
+
+&clks {
+	fsl,ldb-di0-parent = <&clks IMX6QDL_CLK_PLL5_VIDEO_DIV>;
+	fsl,ldb-di1-parent = <&clks IMX6QDL_CLK_PLL5_VIDEO_DIV>;
 };
 
 
@@ -152,23 +190,23 @@
 &hdmi_video {
 	fsl,phy_reg_vlev = <0x0294>;
 	fsl,phy_reg_cksymtx = <0x800d>;
-	status = "okay";
+	status = "disabled";
 };
 
 &hdmi_audio {
-	status = "okay";
+	status = "disabled";
 };
 
 &hdmi_cec {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hdmi_cec>;
-	status = "okay";
+	status = "disabled";
 };
 
 &hdmi_core {
 	ipu_id = <0>;
 	disp_id = <1>;
-	status = "okay";
+	status = "disabled";
 };
 
 /* Touch */
@@ -197,7 +235,7 @@
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
-	status = "okay";
+	status = "disabled";
 	
 	pmic: pfuze100@08 {
 		compatible = "fsl,pfuze100";
@@ -315,7 +353,7 @@
 &pwm3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm3>;
-	status = "okay";
+	status = "disabled";
 };
 
 &uart2 {
@@ -341,7 +379,7 @@
 	pinctrl-0 = <&pinctrl_usbotg>;
 	disable-over-current;
 	dr_mode = "peripheral";
-	status = "okay";
+	status = "disabled";
 };
 
 
@@ -383,17 +421,6 @@
 				MX6QDL_PAD_SD2_DAT2__GPIO1_IO13  0x80000000
 				
 				MX6QDL_PAD_GPIO_18__SD3_VSELECT 0x17059
-				
-				MX6QDL_PAD_EIM_A24__GPIO5_IO04   0x80000000
-				
-				MX6QDL_PAD_SD2_DAT0__GPIO1_IO15  0x80000000
-				
-				
-			
-				
-				MX6QDL_PAD_SD3_RST__GPIO7_IO08 0x80000000
-				
-				MX6QDL_PAD_CSI0_DATA_EN__GPIO5_IO20 0x17059
 			>;
 		};
 
@@ -516,35 +543,35 @@
 		
 		pinctrl_ipu1: ipu1grp {
 					fsl,pins = <
-						MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK 0x10
-						MX6QDL_PAD_DI0_PIN15__IPU1_DI0_PIN15       0x10
-						MX6QDL_PAD_DI0_PIN2__IPU1_DI0_PIN02        0x10
-						MX6QDL_PAD_DI0_PIN3__IPU1_DI0_PIN03        0x10
-						MX6QDL_PAD_DI0_PIN4__IPU1_DI0_PIN04        0x80000000
-						MX6QDL_PAD_DISP0_DAT0__IPU1_DISP0_DATA00   0x10
-						MX6QDL_PAD_DISP0_DAT1__IPU1_DISP0_DATA01   0x10
-						MX6QDL_PAD_DISP0_DAT2__IPU1_DISP0_DATA02   0x10
-						MX6QDL_PAD_DISP0_DAT3__IPU1_DISP0_DATA03   0x10
-						MX6QDL_PAD_DISP0_DAT4__IPU1_DISP0_DATA04   0x10
-						MX6QDL_PAD_DISP0_DAT5__IPU1_DISP0_DATA05   0x10
-						MX6QDL_PAD_DISP0_DAT6__IPU1_DISP0_DATA06   0x10
-						MX6QDL_PAD_DISP0_DAT7__IPU1_DISP0_DATA07   0x10
-						MX6QDL_PAD_DISP0_DAT8__IPU1_DISP0_DATA08   0x10
-						MX6QDL_PAD_DISP0_DAT9__IPU1_DISP0_DATA09   0x10
-						MX6QDL_PAD_DISP0_DAT10__IPU1_DISP0_DATA10  0x10
-						MX6QDL_PAD_DISP0_DAT11__IPU1_DISP0_DATA11  0x10
-						MX6QDL_PAD_DISP0_DAT12__IPU1_DISP0_DATA12  0x10
-						MX6QDL_PAD_DISP0_DAT13__IPU1_DISP0_DATA13  0x10
-						MX6QDL_PAD_DISP0_DAT14__IPU1_DISP0_DATA14  0x10
-						MX6QDL_PAD_DISP0_DAT15__IPU1_DISP0_DATA15  0x10
-						MX6QDL_PAD_DISP0_DAT16__IPU1_DISP0_DATA16  0x10
-						MX6QDL_PAD_DISP0_DAT17__IPU1_DISP0_DATA17  0x10
-						MX6QDL_PAD_DISP0_DAT18__IPU1_DISP0_DATA18  0x10
-						MX6QDL_PAD_DISP0_DAT19__IPU1_DISP0_DATA19  0x10
-						MX6QDL_PAD_DISP0_DAT20__IPU1_DISP0_DATA20  0x10
-						MX6QDL_PAD_DISP0_DAT21__IPU1_DISP0_DATA21  0x10
-						MX6QDL_PAD_DISP0_DAT22__IPU1_DISP0_DATA22  0x10
-						MX6QDL_PAD_DISP0_DAT23__IPU1_DISP0_DATA23  0x10
+						MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK 0x08
+						MX6QDL_PAD_DI0_PIN15__IPU1_DI0_PIN15       0x08
+						MX6QDL_PAD_DI0_PIN2__IPU1_DI0_PIN02        0x08
+						MX6QDL_PAD_DI0_PIN3__IPU1_DI0_PIN03        0x08
+						MX6QDL_PAD_DI0_PIN4__IPU1_DI0_PIN04        0x80000000 
+						MX6QDL_PAD_DISP0_DAT0__IPU1_DISP0_DATA00   0x08
+						MX6QDL_PAD_DISP0_DAT1__IPU1_DISP0_DATA01   0x08
+						MX6QDL_PAD_DISP0_DAT2__IPU1_DISP0_DATA02   0x08
+						MX6QDL_PAD_DISP0_DAT3__IPU1_DISP0_DATA03   0x08
+						MX6QDL_PAD_DISP0_DAT4__IPU1_DISP0_DATA04   0x08
+						MX6QDL_PAD_DISP0_DAT5__IPU1_DISP0_DATA05   0x08
+						MX6QDL_PAD_DISP0_DAT6__IPU1_DISP0_DATA06   0x08
+						MX6QDL_PAD_DISP0_DAT7__IPU1_DISP0_DATA07   0x08
+						MX6QDL_PAD_DISP0_DAT8__IPU1_DISP0_DATA08   0x08
+						MX6QDL_PAD_DISP0_DAT9__IPU1_DISP0_DATA09   0x08
+						MX6QDL_PAD_DISP0_DAT10__IPU1_DISP0_DATA10  0x08
+						MX6QDL_PAD_DISP0_DAT11__IPU1_DISP0_DATA11  0x08
+						MX6QDL_PAD_DISP0_DAT12__IPU1_DISP0_DATA12  0x08
+						MX6QDL_PAD_DISP0_DAT13__IPU1_DISP0_DATA13  0x08
+						MX6QDL_PAD_DISP0_DAT14__IPU1_DISP0_DATA14  0x08
+						MX6QDL_PAD_DISP0_DAT15__IPU1_DISP0_DATA15  0x08
+						MX6QDL_PAD_DISP0_DAT16__IPU1_DISP0_DATA16  0x08
+						MX6QDL_PAD_DISP0_DAT17__IPU1_DISP0_DATA17  0x08
+						MX6QDL_PAD_DISP0_DAT18__IPU1_DISP0_DATA18  0x08
+						MX6QDL_PAD_DISP0_DAT19__IPU1_DISP0_DATA19  0x08
+						MX6QDL_PAD_DISP0_DAT20__IPU1_DISP0_DATA20  0x08
+						MX6QDL_PAD_DISP0_DAT21__IPU1_DISP0_DATA21  0x08
+						MX6QDL_PAD_DISP0_DAT22__IPU1_DISP0_DATA22  0x08
+						MX6QDL_PAD_DISP0_DAT23__IPU1_DISP0_DATA23  0x08
 					>;
 				};
 		
