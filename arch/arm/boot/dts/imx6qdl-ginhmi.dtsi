@@ -63,6 +63,7 @@
 		
 		reg_sd2_vmmc: regulator@4 {
 			compatible = "regulator-fixed";
+			reg = <4>;
 			regulator-name = "P3V3_SD2_SWITCHED";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
@@ -72,6 +73,7 @@
 		
 		reg_sd3_vmmc: regulator@5 {
 			compatible = "regulator-fixed";
+			reg = <5>;
 			regulator-name = "P3V3_SD3_SWITCHED";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
