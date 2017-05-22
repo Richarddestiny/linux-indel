@@ -63,10 +63,10 @@
 		
 		reg_sd3_vmmc: regulator@4 {
 			compatible = "regulator-fixed";
-			regulator-name = "P3V3_SDa_SWITCHED";
+			regulator-name = "P3V3_SD3_SWITCHED";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			#gpio = <&gpio7 8 GPIO_ACTIVE_HIGH>;
+			gpio = <&gpio7 8 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
 		};				
 	};
@@ -87,15 +87,7 @@
 		status = "disabled";
 	};
 	
-	lcd@0 {
-			compatible = "fsl,lcd";
-			ipu_id = <0>;
-			disp_id = <0>;
-			default_ifmt = "BGR24";
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_ipu1>;
-			status = "disabled";
-	};
+
 	
 	mxcfb1: fb@0 {
 			compatible = "fsl,mxc_sdc_fb";
@@ -106,18 +98,7 @@
 			late_init = <0>;
 			status = "okay";
 		};
-	/*
-	mxcfb1: fb@0{
-			compatible = "fsl,mxc_sdc_fb";
-			disp_dev = "lcd";
-			interface_pix_fmt = "BGR24";
-			mode_str ="AMPIRE-PSP";
-			default_bpp = <16>;
-			int_clk = <0>;
-			late_init = <0>;
-			status = "okay";
-	};*/
-	
+
 	mxcfb2: fb@1 {
 			compatible = "fsl,mxc_sdc_fb";
 			disp_dev = "hdmi";
@@ -351,13 +332,8 @@
 
 
 &usbh1 {
-	status = "okay";
-};
-
-
-&usbh1 {
 	vbus-supply = <&reg_usb_h1_vbus>;
-	status = "okay";
+	status = "disabled";
 };
 
 
@@ -375,8 +351,7 @@
 	pinctrl-0 = <&pinctrl_usdhc3>;
 	bus-width = <4>;
 	cd-gpios = <&gpio2 1 GPIO_ACTIVE_LOW>;
-	
-	no-1-8-v;
+	vmmc-supply = <&reg_sd3_vmmc>;
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
 	status = "okay";
@@ -404,7 +379,6 @@
 				
 				MX6QDL_PAD_EIM_D30__GPIO3_IO30 0x0f0b0	/* Touch controller reset active low     */
 				MX6QDL_PAD_EIM_D29__GPIO3_IO29 0x0f0b0	/* Touch controller interrupt active low */
-				MX6QDL_PAD_GPIO_18__SD3_VSELECT 0x17059
 			>;
 		};
 
@@ -443,7 +417,6 @@
 		};
 
 		
-
 		pinctrl_hdmi_cec: hdmicecgrp {
 			fsl,pins = <
 				MX6QDL_PAD_KEY_ROW2__HDMI_TX_CEC_LINE 0x1f8b0
@@ -484,9 +457,6 @@
 						MX6QDL_PAD_GPIO_9__PWM1_OUT		0x1b0b1
 					>;
 				};
-		
-	
-		
 		
 		pinctrl_uart2: uart2grp {
 			fsl,pins = <
@@ -529,41 +499,6 @@
 				MX6QDL_PAD_SD4_DAT7__SD4_DATA7		0x17059
 			>;
 		};
-		
-		pinctrl_ipu1: ipu1grp {
-					fsl,pins = <
-						MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK 0x08
-						MX6QDL_PAD_DI0_PIN15__IPU1_DI0_PIN15       0x08
-						MX6QDL_PAD_DI0_PIN2__IPU1_DI0_PIN02        0x08
-						MX6QDL_PAD_DI0_PIN3__IPU1_DI0_PIN03        0x08
-						MX6QDL_PAD_DI0_PIN4__IPU1_DI0_PIN04        0x80000000 
-						MX6QDL_PAD_DISP0_DAT0__IPU1_DISP0_DATA00   0x08
-						MX6QDL_PAD_DISP0_DAT1__IPU1_DISP0_DATA01   0x08
-						MX6QDL_PAD_DISP0_DAT2__IPU1_DISP0_DATA02   0x08
-						MX6QDL_PAD_DISP0_DAT3__IPU1_DISP0_DATA03   0x08
-						MX6QDL_PAD_DISP0_DAT4__IPU1_DISP0_DATA04   0x08
-						MX6QDL_PAD_DISP0_DAT5__IPU1_DISP0_DATA05   0x08
-						MX6QDL_PAD_DISP0_DAT6__IPU1_DISP0_DATA06   0x08
-						MX6QDL_PAD_DISP0_DAT7__IPU1_DISP0_DATA07   0x08
-						MX6QDL_PAD_DISP0_DAT8__IPU1_DISP0_DATA08   0x08
-						MX6QDL_PAD_DISP0_DAT9__IPU1_DISP0_DATA09   0x08
-						MX6QDL_PAD_DISP0_DAT10__IPU1_DISP0_DATA10  0x08
-						MX6QDL_PAD_DISP0_DAT11__IPU1_DISP0_DATA11  0x08
-						MX6QDL_PAD_DISP0_DAT12__IPU1_DISP0_DATA12  0x08
-						MX6QDL_PAD_DISP0_DAT13__IPU1_DISP0_DATA13  0x08
-						MX6QDL_PAD_DISP0_DAT14__IPU1_DISP0_DATA14  0x08
-						MX6QDL_PAD_DISP0_DAT15__IPU1_DISP0_DATA15  0x08
-						MX6QDL_PAD_DISP0_DAT16__IPU1_DISP0_DATA16  0x08
-						MX6QDL_PAD_DISP0_DAT17__IPU1_DISP0_DATA17  0x08
-						MX6QDL_PAD_DISP0_DAT18__IPU1_DISP0_DATA18  0x08
-						MX6QDL_PAD_DISP0_DAT19__IPU1_DISP0_DATA19  0x08
-						MX6QDL_PAD_DISP0_DAT20__IPU1_DISP0_DATA20  0x08
-						MX6QDL_PAD_DISP0_DAT21__IPU1_DISP0_DATA21  0x08
-						MX6QDL_PAD_DISP0_DAT22__IPU1_DISP0_DATA22  0x08
-						MX6QDL_PAD_DISP0_DAT23__IPU1_DISP0_DATA23  0x08
-					>;
-				};
-		
 		
 		
 		pinctrl_weim_cs0: weimcs0grp {

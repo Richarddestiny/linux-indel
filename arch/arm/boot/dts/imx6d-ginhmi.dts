@@ -23,3 +23,6 @@
 	};
 };
 
+&usbh1 {
+	status = "disabled";
+};
