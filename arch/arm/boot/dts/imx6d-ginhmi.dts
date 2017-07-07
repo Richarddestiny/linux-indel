@@ -23,3 +23,10 @@
 	};
 };
 
+&usbh1 {
+	status = "okay";
+};
+
+&usbotg {
+	status = "okay";
+};

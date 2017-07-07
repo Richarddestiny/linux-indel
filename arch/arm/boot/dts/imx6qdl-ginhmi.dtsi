@@ -84,7 +84,7 @@
 
 	backlight_lcd {
 		compatible = "pwm-backlight";
-		pwms = <&pwm3 0 12000>;
+		pwms = <&pwm3 0 12000>;							/*period in nanoseconds */
 		brightness-levels = <0 4 8 16 32 64 128 255>;
 		default-brightness-level = <7>;
 		status = "disabled";
@@ -95,18 +95,10 @@
 		pwms = <&pwm1 0 5000000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
 		default-brightness-level = <7>;
-		status = "disabled";
+		status = "okay";
 	};
 	
-	lcd@0 {
-			compatible = "fsl,lcd";
-			ipu_id = <0>;
-			disp_id = <0>;
-			default_ifmt = "RGB24";
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_ipu1>;
-			status = "disabled";
-	};
+
 	
 	mxcfb1: fb@0 {
 			compatible = "fsl,mxc_sdc_fb";
@@ -117,18 +109,7 @@
 			late_init = <0>;
 			status = "okay";
 		};
-	/*
-	mxcfb1: fb@0{
-			compatible = "fsl,mxc_sdc_fb";
-			disp_dev = "lcd";
-			interface_pix_fmt = "RGB24";
-			mode_str ="AMPIRE-PSP";
-			default_bpp = <16>;
-			int_clk = <0>;
-			late_init = <0>;
-			status = "okay";
-	};*/
-	
+
 	mxcfb2: fb@1 {
 			compatible = "fsl,mxc_sdc_fb";
 			disp_dev = "hdmi";
@@ -172,6 +153,24 @@
 &clks {
 	fsl,ldb-di0-parent = <&clks IMX6QDL_CLK_PLL5_VIDEO_DIV>;
 	fsl,ldb-di1-parent = <&clks IMX6QDL_CLK_PLL5_VIDEO_DIV>;
+};
+
+
+&ecspi1 {
+	fsl,spi-num-chipselects = <3>;
+	cs-gpios = <&gpio3 19 0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi1>;
+	status = "okay";
+	
+	flash: mx25l51245g@2 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "macronix,mx25l51245g";
+		spi-nor;
+		spi-max-frequency = <20000000>;
+		reg = <2>;
+	};
 };
 
 
@@ -330,16 +329,13 @@
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 	
-	mpu6050@68 {
-		compatible = "invensense,mpu6050";
+	gyro@68 {
+		compatible = "icm20689";
 		reg = <0x68>;
 		interrupt-parent = <&gpio6>;
-		interrupts = <11 0x01>;
-		invensense,int_config = <0x10>;
-		invensense,level_shifter = <0>;
-		invensense,orientation = [01 00 00 00 01 00 00 00 01];
-		invensense,sec_slave_type = <0>;
-		invensense,key = [4e cc 7e eb f6 1e 35 22 00 34 0d 65 32 e9 94 89];
+		interrupts = <11 2>;
+		int_config = <0xF0>;
+		orientation = [01 00 00 00 01 00 00 00 01];
 	};
 	
 	
@@ -348,7 +344,7 @@
 &pwm1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm1>;
-	status = "disabled";
+	status = "okay";
 };
 
 
@@ -366,22 +362,17 @@
 
 
 &usbh1 {
-	status = "okay";
-};
-
-
-&usbh1 {
 	vbus-supply = <&reg_usb_h1_vbus>;
 	status = "okay";
+
 };
-
-
+	
 &usbotg {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg>;
 	disable-over-current;
 	dr_mode = "peripheral";
-	status = "disabled";
+	status = "okay";
 };
 
 
@@ -405,7 +396,33 @@
 	keep-power-in-suspend;
 	status = "okay";
 };
+
+&weim {
+	compatible = "fsl,imx6q-weim";
+	reg = <0x021b8000 0x4000>;
+	clocks = <&clks 196>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_weim_nor &pinctrl_weim_cs0>;
+	#address-cells = <2>;
+	#size-cells = <1>;
+	ranges = <0 0 0x08000000 0x08000000>;
+	status = "okay";
 	
+	sram: sram@0,0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "cypress,cy7c1019dv33-10zsxi, mtd-ram";
+		reg = <0 0x00000000 0x00200000>;
+		bank-width = <4>;							
+		fsl,weim-cs-timing = <0x0013f33f 	/* EIM_CSnGCR1 */
+							  0x00000002 	/* EIM_CSnGCR2 */
+							  0x03320020	/* EIM_CSnRCR1 */
+							  0x00000000 	/* EIM_CSnRCR2 */
+							  0x1404a38e 	/* EIM_CSnWCR1 */
+							  0x00000000>;	/* EIM_CSnWCR2 */
+	};						/* Somehow it runs -- Do not change anything !!!!!!! */
+};
+
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
@@ -413,32 +430,40 @@
 	imx6qdl-ginhmi {
 		
 		pinctrl_hog: hoggrp {
-			fsl,pins = <
+			fsl,pins = <	
+				MX6QDL_PAD_EIM_D30__GPIO3_IO30    0x0f0b0	/* Touch controller reset active low     RGB*/
+				MX6QDL_PAD_EIM_D29__GPIO3_IO29    0x0f0b0	/* Touch controller interrupt active low RGB*/
+				MX6QDL_PAD_GPIO_0__GPIO1_IO00     0x0f0b0	/* Touch controller reset active low     LVDS*/
+				MX6QDL_PAD_KEY_COL0__GPIO4_IO06   0x0f0b0	/* Touch controller interrupt active low LVDS*/
+				MX6QDL_PAD_NANDF_CS0__GPIO6_IO11  0x0f0b0	/* ICM20689 controller interrupt active low */
+			/*	MX6QDL_PAD_EIM_WAIT__GPIO5_IO00	  0x0f0b0	 FPGA EIM bus interrupt active low */
 				
-				MX6QDL_PAD_EIM_D30__GPIO3_IO30 0x0f0b0	/* RGB Touch controller reset active low     */
-				MX6QDL_PAD_EIM_D29__GPIO3_IO29 0x0f0b0	/* RGB Touch controller interrupt active low */
-			
-			/*											/*											 */
-				
-				MX6QDL_PAD_SD2_DAT2__GPIO1_IO13  0x80000000
-				
-				MX6QDL_PAD_GPIO_18__SD3_VSELECT 0x17059
+
+		/*		MX6QDL_PAD_EIM_A24__GPIO5_IO04 	0x0f0b0
+				MX6QDL_PAD_EIM_A23__GPIO6_IO06	0x0f0b0
+				MX6QDL_PAD_EIM_A22__GPIO2_IO16	0x0f0b0
+				MX6QDL_PAD_EIM_A21__GPIO2_IO17 	0x0f0b0
+				MX6QDL_PAD_EIM_A20__GPIO2_IO18	0x0f0b0
+				MX6QDL_PAD_EIM_A19__GPIO2_IO19	0x0f0b0
+				MX6QDL_PAD_EIM_A18__GPIO2_IO20  0x0f0b0 
+				MX6QDL_PAD_EIM_A17__GPIO2_IO21	0x0f0b0
+				MX6QDL_PAD_EIM_A16__GPIO2_IO22	0x0f0b0*/
 			>;
 		};
 
-				pinctrl_ecspi1: ecspi1grp {
-					fsl,pins = <
-						MX6QDL_PAD_EIM_D17__ECSPI1_MISO		0x100b1
-						MX6QDL_PAD_EIM_D18__ECSPI1_MOSI		0x100b1
-						MX6QDL_PAD_EIM_D16__ECSPI1_SCLK		0x100b1
-					>;
-				};
+		pinctrl_ecspi1: ecspi1grp {
+			fsl,pins = <
+				MX6QDL_PAD_EIM_D17__ECSPI1_MISO		0x100b1
+				MX6QDL_PAD_EIM_D18__ECSPI1_MOSI		0x100b1
+				MX6QDL_PAD_EIM_D16__ECSPI1_SCLK		0x100b1
+			>;
+		};
 
-				pinctrl_ecspi1_cs: ecspi1cs {
-					fsl,pins = <
-						MX6QDL_PAD_EIM_D19__GPIO3_IO19 0x80000000
-					>;
-				};
+		pinctrl_ecspi1_cs: ecspi1cs {
+			fsl,pins = <
+				MX6QDL_PAD_EIM_D19__GPIO3_IO19 0x80000000
+			>;
+		};
 		
 		
 		pinctrl_enet: enetgrp {
@@ -543,41 +568,6 @@
 			>;
 		};
 		
-		pinctrl_ipu1: ipu1grp {
-					fsl,pins = <
-						MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK 0x08
-						MX6QDL_PAD_DI0_PIN15__IPU1_DI0_PIN15       0x08
-						MX6QDL_PAD_DI0_PIN2__IPU1_DI0_PIN02        0x08
-						MX6QDL_PAD_DI0_PIN3__IPU1_DI0_PIN03        0x08
-						MX6QDL_PAD_DI0_PIN4__IPU1_DI0_PIN04        0x80000000 
-						MX6QDL_PAD_DISP0_DAT0__IPU1_DISP0_DATA00   0x08
-						MX6QDL_PAD_DISP0_DAT1__IPU1_DISP0_DATA01   0x08
-						MX6QDL_PAD_DISP0_DAT2__IPU1_DISP0_DATA02   0x08
-						MX6QDL_PAD_DISP0_DAT3__IPU1_DISP0_DATA03   0x08
-						MX6QDL_PAD_DISP0_DAT4__IPU1_DISP0_DATA04   0x08
-						MX6QDL_PAD_DISP0_DAT5__IPU1_DISP0_DATA05   0x08
-						MX6QDL_PAD_DISP0_DAT6__IPU1_DISP0_DATA06   0x08
-						MX6QDL_PAD_DISP0_DAT7__IPU1_DISP0_DATA07   0x08
-						MX6QDL_PAD_DISP0_DAT8__IPU1_DISP0_DATA08   0x08
-						MX6QDL_PAD_DISP0_DAT9__IPU1_DISP0_DATA09   0x08
-						MX6QDL_PAD_DISP0_DAT10__IPU1_DISP0_DATA10  0x08
-						MX6QDL_PAD_DISP0_DAT11__IPU1_DISP0_DATA11  0x08
-						MX6QDL_PAD_DISP0_DAT12__IPU1_DISP0_DATA12  0x08
-						MX6QDL_PAD_DISP0_DAT13__IPU1_DISP0_DATA13  0x08
-						MX6QDL_PAD_DISP0_DAT14__IPU1_DISP0_DATA14  0x08
-						MX6QDL_PAD_DISP0_DAT15__IPU1_DISP0_DATA15  0x08
-						MX6QDL_PAD_DISP0_DAT16__IPU1_DISP0_DATA16  0x08
-						MX6QDL_PAD_DISP0_DAT17__IPU1_DISP0_DATA17  0x08
-						MX6QDL_PAD_DISP0_DAT18__IPU1_DISP0_DATA18  0x08
-						MX6QDL_PAD_DISP0_DAT19__IPU1_DISP0_DATA19  0x08
-						MX6QDL_PAD_DISP0_DAT20__IPU1_DISP0_DATA20  0x08
-						MX6QDL_PAD_DISP0_DAT21__IPU1_DISP0_DATA21  0x08
-						MX6QDL_PAD_DISP0_DAT22__IPU1_DISP0_DATA22  0x08
-						MX6QDL_PAD_DISP0_DAT23__IPU1_DISP0_DATA23  0x08
-					>;
-				};
-		
-		
 		
 		pinctrl_weim_cs0: weimcs0grp {
 			fsl,pins = <
@@ -587,9 +577,15 @@
 
 		pinctrl_weim_nor: weimnorgrp {										
 			fsl,pins = <
+				MX6QDL_PAD_EIM_LBA__EIM_LBA_B 		0xb0b1
 				MX6QDL_PAD_EIM_OE__EIM_OE_B			0xb0b1
 				MX6QDL_PAD_EIM_RW__EIM_RW			0xb0b1
-				MX6QDL_PAD_EIM_WAIT__EIM_DTACK_B	0xb060
+			/*	MX6QDL_PAD_EIM_WAIT__EIM_DTACK_B	0xb060 */
+				MX6QDL_PAD_EIM_EB0__EIM_EB0_B 		0xb0b1
+				MX6QDL_PAD_EIM_EB1__EIM_EB1_B  		0xb0b1
+				MX6QDL_PAD_EIM_EB2__EIM_EB2_B  		0xb0b1
+				MX6QDL_PAD_EIM_EB3__EIM_EB3_B 		0xb0b1
+				MX6QDL_PAD_EIM_BCLK__EIM_BCLK		0xb0b1				
 				MX6QDL_PAD_EIM_DA0__EIM_AD00		0xb0b1
 				MX6QDL_PAD_EIM_DA1__EIM_AD01		0xb0b1
 				MX6QDL_PAD_EIM_DA2__EIM_AD02		0xb0b1
@@ -626,7 +622,6 @@
 		};
 	};
 };
-
 
 
 
