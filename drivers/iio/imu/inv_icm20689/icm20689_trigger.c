@@ -125,7 +125,7 @@ int icm20689_probe_trigger(struct iio_dev *indio_dev)
 
 	ret = devm_request_irq(&indio_dev->dev, st->client->irq,
 			       &iio_trigger_generic_data_rdy_poll,
-				   IRQF_TRIGGER_LOW,
+				   IRQF_ONESHOT,
 			       "icm20689",
 			       st->trig);
 	if (ret)

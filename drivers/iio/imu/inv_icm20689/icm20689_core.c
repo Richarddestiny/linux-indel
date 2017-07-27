@@ -583,6 +583,19 @@ static const struct iio_chan_spec icm20689_channels[] = {
 };
 
 
+static ssize_t show_wom_thr(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct iio_dev *indio_dev = i2c_get_clientdata(client);
+	struct icm20689_state *st = iio_priv(indio_dev);
+	ssize_t err;
+
+	err = sprintf(buf,"Range [255:0]: %u\n", st->wom_thr);
+
+	return err;
+}
+
 static ssize_t set_wom_thr(struct device *dev,
           	  	  	  	struct device_attribute *attr,
 						const char *buffer, size_t count)
@@ -598,7 +611,7 @@ static ssize_t set_wom_thr(struct device *dev,
 }
 
 /* Attach the sysfs write method */
-DEVICE_ATTR(wom_thr, 0644, NULL, set_wom_thr);
+DEVICE_ATTR(wom_thr, 0644, show_wom_thr, set_wom_thr);
 
 /* constant IIO attribute */
 static IIO_CONST_ATTR_SAMP_FREQ_AVAIL("10 20 50 100 200 500");
@@ -791,12 +804,6 @@ static int icm20689_probe(struct i2c_client *client,
 			"Could not initialize device.\n");
 		return err;
 	}
-
-	/* Needed for wakeup capability */
-	err = devm_request_threaded_irq(&client->dev, client->irq,
-						  NULL, st_irq_handler,
-						  IRQF_ONESHOT,
-						  client->name, st);
 
 	i2c_set_clientdata(client, indio_dev);
 
